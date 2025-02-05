@@ -16,6 +16,6 @@ def create_app(config_mode):
     db.init_app(app)
     migrate.init_app(app, db)
     
-   # from users.models import Users, Types, Attendance, Levels, Sections, Strands
+    import src.users.models
     
     return app
