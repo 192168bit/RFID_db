@@ -1,54 +1,116 @@
+from collections import OrderedDict
 from src import db
 from sqlalchemy import Column, Integer, String, ForeignKey
 from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
-from flask_sqlalchemy import SQLAlchemy
 
 
 class Users(db.Model):
     __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    contact_num = db.Column(db.Integer, unique=True, nullable=False)
+    contact_num = db.Column(db.String(100), unique=True, nullable=False)
     address = db.Column(db.String(200))
     email = db.Column(db.String(100), nullable=False)
-    type_id = db.Column(db.Integer, ForeignKey("types.id"), nullable=False)
-    level_id = db.Column(db.Integer, ForeignKey("levels.id"), nullable=False)
-    section_id = db.Column(db.Integer, ForeignKey("sections.id"), nullable=False)
-    strand_id = db.Column(db.Integer, ForeignKey("strands.id"), nullable=False)
-    attendance = db.relationship("Attendance", backref="users", lazy=True)
+
+    type_id = db.Column(db.Integer, db.ForeignKey("usertypes.id"), nullable=False)
+    type = db.relationship("UserTypes", backref="user", lazy=True)
+       
+    level_id = db.Column(db.Integer, db.ForeignKey("levels.id"), nullable=False)
+    level = db.relationship("Levels", backref="user", lazy=True)
+
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False)
+    section = db.relationship("Sections", backref="user", lazy=True)
+
+    strand_id = db.Column(db.Integer, db.ForeignKey("strands.id"), nullable=False)
+    strand = db.relationship("Strands", backref="user", lazy=True)
+
+    attendance = db.relationship("Attendance", backref="user", lazy=True)
+    
+    def toDict(self):
+       return   {
+           "id": self.id,
+           "first_name": self.first_name,
+           "middle_name": self.middle_name,
+           "last_name": self.last_name,
+           "contact_num": self.contact_num,
+           "address": self.address,
+           "email": self.email,
+           "type_id": self.type_id,
+           "type_name": self.type.type_name if self.type else None,
+           "level_id": self.level_id,
+           "level_name": self.level.level_name if self.level else None,
+           "section_id": self.section_id,
+           "section_name": self.section.section_name if self.section else None,
+           "strand_id": self.strand_id,
+           "strand_name": self.strand.strand_name if self.strand else None,
+        }
+
+        
+    def __repr__(self):
+        return f"<User(first_name={self.first_name}, last_name={self.last_name})>"
 
 
-class Types(db.Model):
-    __tablename__ = "types"
-    id = db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
+class UserTypes(db.Model):
+    __tablename__ = "usertypes"
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     type_name = db.Column(db.String(100), unique=True, nullable=False)
-    user_id = db.relationship("Users", backref="types", lazy=True)
+    users = db.relationship("Users", backref="usertypes", lazy=True)
+    
+    def toDict(self):
+        return {
+            "id": self.id,
+            "type_name": self.type_name
+        }
 
 
 class Attendance(db.Model):
     __tablename__ = "attendance"
-    id = db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
-    user_id = db.Column(db.Integer, ForeignKey("users.id"), nullable=False)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     status = db.Column(db.String(100), nullable=False)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+        
+    def toDict(self):
+        return {
+            "id": self.id,
+            "status": self.status,
+            "timestamp": self.timestamp
+        }
 
 class Levels(db.Model):
     __tablename__ = "levels"
-    id = db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
-    grade_level = db.Column(db.Integer, unique=True, nullable=False)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
+    level_name = db.Column(db.String, unique=True, nullable=False)
+    users = db.relationship("Users", backref="levels", lazy=True)
 
+    def toDict(self):
+        return {
+            "id": self.id,
+            "level_name": self.level_name
+        }
 
 class Sections(db.Model):
     __tablename__ = "sections"
-    id = db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     section_name = db.Column(db.String, unique=True, nullable=False)
+    users = db.relationship("Users", backref="sections", lazy=True)
 
+    def toDict(self):
+        return {
+            "id": self.id,
+            "section_name": self.section_name
+        }
 
 class Strands(db.Model):
     __tablename__ = "strands"
-    id = db.Column(db.Integer, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     strand_name = db.Column(db.String(100), unique=True, nullable=False)
+    
+    def toDict(self):
+        return {
+            "id": self.id,
+            "strand_name": self.strand_name
+        }
