@@ -57,7 +57,7 @@ class UserTypes(db.Model):
     __tablename__ = "usertypes"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     type_name = db.Column(db.String(100), unique=True, nullable=False)
-    users = db.relationship("Users", backref="usertypes", lazy=True)
+
     
     def toDict(self):
         return {
@@ -84,7 +84,7 @@ class Levels(db.Model):
     __tablename__ = "levels"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     level_name = db.Column(db.String, unique=True, nullable=False)
-    users = db.relationship("Users", backref="levels", lazy=True)
+
 
     def toDict(self):
         return {
@@ -96,7 +96,7 @@ class Sections(db.Model):
     __tablename__ = "sections"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     section_name = db.Column(db.String, unique=True, nullable=False)
-    users = db.relationship("Users", backref="sections", lazy=True)
+ 
 
     def toDict(self):
         return {
@@ -108,6 +108,7 @@ class Strands(db.Model):
     __tablename__ = "strands"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
     strand_name = db.Column(db.String(100), unique=True, nullable=False)
+
     
     def toDict(self):
         return {

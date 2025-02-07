@@ -1,7 +1,7 @@
 from flask import request
 
 from ..app import app
-from .controllers import list_all_users_controller, create_user_controller, get_user_profile, update_user, delete_user
+from .controllers import list_all_users_controller, create_user_controller, get_user_profile, update_user, delete_user, list_user_by_type
 
 @app.route("/users", methods=["GET", "POST"])
 def list_create_users():
@@ -22,3 +22,8 @@ def profile_update_delete_user(user_id):
         return delete_user(user_id)
     else:
         return "Method is Not Allowed"
+    
+@app.route("/types/<type>", methods=["GET"])
+def get_user_type(type):
+    return list_user_by_type(type)
+ 
