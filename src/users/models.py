@@ -18,13 +18,13 @@ class Users(db.Model):
     type_id = db.Column(db.Integer, db.ForeignKey("usertypes.id"), nullable=False)
     type = db.relationship("UserTypes", backref="user", lazy=True)
        
-    level_id = db.Column(db.Integer, db.ForeignKey("levels.id"), nullable=False)
+    level_id = db.Column(db.Integer, db.ForeignKey("levels.id"), nullable=True)
     level = db.relationship("Levels", backref="user", lazy=True)
 
-    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=True)
     section = db.relationship("Sections", backref="user", lazy=True)
 
-    strand_id = db.Column(db.Integer, db.ForeignKey("strands.id"), nullable=False)
+    strand_id = db.Column(db.Integer, db.ForeignKey("strands.id"), nullable=True)
     strand = db.relationship("Strands", backref="user", lazy=True)
 
     attendance = db.relationship("Attendance", backref="user", lazy=True)
@@ -56,7 +56,7 @@ class Users(db.Model):
 class UserTypes(db.Model):
     __tablename__ = "usertypes"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
-    type_name = db.Column(db.String(100), unique=True, nullable=False)
+    type_name = db.Column(db.String, unique=True, nullable=False)
 
     
     def toDict(self):
@@ -107,7 +107,7 @@ class Sections(db.Model):
 class Strands(db.Model):
     __tablename__ = "strands"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
-    strand_name = db.Column(db.String(100), unique=True, nullable=False)
+    strand_name = db.Column(db.String, unique=True, nullable=False)
 
     
     def toDict(self):

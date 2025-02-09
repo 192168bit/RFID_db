@@ -1,39 +1,49 @@
-from flask import jsonify, request
+from flask import request, json, Response
 from src import db
-from .models import UserTypes, Users
+from .models import Levels, Strands, UserTypes, Users, Sections
 
 
 def list_all_users_controller():
     users = Users.query.all()
     response = [user.toDict() for user in users]
-    return jsonify(response)
+    response_data = json.dumps(response, sort_keys=False)
+    return Response(response_data, mimetype='application/json')
 
 
-def get_user_profile(user_id):
-    response = Users.query.get(user_id).toDict()
-    return jsonify(response)
+def user_profile(user_id):
+    user_profile = Users.query.get(user_id).toDict()
+    response_data = json.dumps(user_profile, sort_keys=False)
+    return Response(response_data, mimetype='application/json')
 
 
-def list_user_by_type(type):
-    users = Users.query.join(UserTypes).filter(UserTypes.type_name == type).all()
-    return jsonify(
-        {
-            type + "s": [
-                {
-                    'first_name': user.first_name,
-                    'middle_name': user.middle_name,
-                    'last_name': user.last_name,
-                    'contact_num': user.contact_num,
-                    'email': user.email,
-                    'type_name': user.type.type_name,
-                    'level': user.level,
-                    'section': user.section,
-                    'strand': user.strand,
-                }
-                for user in users
-            ]
-        }
-    )
+def list_of_users_by_type(type):
+    users_by_type = Users.query.join(UserTypes).filter(UserTypes.type_name == type).all()
+    user_data = [user.toDict() for user in users_by_type]
+    response_data = json.dumps(user_data, sort_keys=False)
+    return Response(response_data, mimetype='application/json')
+
+
+def list_of_students_by_level(level):
+    student_level = Users.query.join(Levels).filter(Levels.level_name == level).all()
+    user_data = [user.toDict() for user in student_level]
+    response_data = json.dumps(user_data, sort_keys=False)
+    print(response_data)
+    return Response(response_data, mimetype='application/json')
+
+
+def list_of_students_by_section(section):
+    student_section = Users.query.join(Sections).filter(Sections.section_name == section).all()
+    user_data = [users.toDict() for users in student_section]
+    response_data = json.dumps(user_data, sort_keys=False)
+    print(response_data)
+    return Response(response_data, mimetype='application/json')
+
+
+def list_of_students_by_strand(strand):
+    student_strand = Users.query.join(Strands).filter(Strands.strand_name == strand).all()
+    user_data = [users.toDict() for users in student_strand]
+    response_data = json.dumps(user_data, sort_keys=False)
+    return Response(response_data, mimetype='application/json')
 
 
 def create_user_controller():
@@ -54,28 +64,30 @@ def create_user_controller():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify(new_user.toDict()), 201
+    new_user = new_user.toDict()
+    response_data = json.dumps(new_user, sort_keys=False)
+    return Response(response_data, mimetype='application/json'), 201
 
 
 def update_user(user_id):
-    request_form = request.form.to_dict()
-    user = Users.query.get(user_id).toDict()
-
-    user.first_name = request_form["first_name"]
-    user.middle_name = request_form["middle_name"]
-    user.last_name = request_form["last_name"]
-    user.contact_num = request_form["contact_num"]
-    user.address = request_form["address"]
-    user.email = request_form["email"]
-    user.type_id = request_form["type_id"]
-    user.level_id = request_form["level_id"]
-    user.section_id = request_form["section_id"]
-    user.strand_id = request_form["strand_id"]
-
+    user = Users.query.get(user_id)
+    
+    if request.get_json:
+        request_form = request.json
+    else:
+        request_form = request.form.to_dict()
+   
+    ignore_fields = ['type_name', 'level_name', 'section_name', 'strand_name']
+    
+    for key, value in request_form.items():
+        if key not in ignore_fields:
+            setattr(user, key, value)
+          
     db.session.commit()
 
-    response = Users.query.get(user_id).toDict()
-    return jsonify(response)
+    user = user.toDict()
+    response_data = json.dumps(user, sort_keys=False)
+    return Response(response_data, mimetype='application/json')
 
 
 def delete_user(user_id):
