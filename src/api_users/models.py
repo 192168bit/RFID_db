@@ -3,6 +3,8 @@ from src import db
 from sqlalchemy import Column, Integer, String, ForeignKey
 from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 
 class Users(db.Model):
@@ -13,7 +15,8 @@ class Users(db.Model):
     last_name = db.Column(db.String(100), nullable=False)
     contact_num = db.Column(db.String(100), unique=True, nullable=False)
     address = db.Column(db.String(200))
-    email = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
 
     type_id = db.Column(db.Integer, db.ForeignKey("usertypes.id"), nullable=False)
     type = db.relationship("UserTypes", backref="user", lazy=True)
@@ -48,7 +51,13 @@ class Users(db.Model):
            "strand_name": self.strand.strand_name if self.strand else None,
         }
 
-        
+    def __init__(self, email, password):
+        self.email == email
+        self.password == generate_password_hash(password)
+    
+    def check_password(self, password):
+        return check_password_hash(self.password, password)    
+    
     def __repr__(self):
         return f"<User(first_name={self.first_name}, last_name={self.last_name})>"
 

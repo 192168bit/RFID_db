@@ -1,7 +1,50 @@
-from flask import request, json, Response
+from flask import jsonify, request, json, Response
+from flask_jwt_extended import create_access_token
 from src import db
 from .models import Levels, Strands, UserTypes, Users, Sections
+from werkzeug.security import generate_password_hash, check_password_hash
 
+def user_login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+    
+    user = Users.query.filter_by(email=email).first()
+
+    if user and check_password_hash(user.password, password):
+        token = create_access_token(identity=user.id)
+        
+        user_data = {
+            "id" : user.id,
+            "first_name" : user.first_name,
+            "middle_name" : user.middle_name,
+            "last_name" : user.last_name,
+            "email" : user.email
+        }
+        response_data = {
+            "user": user_data,
+            "token": token
+        }
+        response_json = json.dumps(response_data, sort_keys=False)
+
+        return Response(response_json, status=200, mimetype="application/json")
+    
+    error_response = json.dumps({"message": "Invalid credentials"})
+    return Response(error_response, status=401, mimetype="application/json")
+
+    
+def register():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if Users.query.filter_by(email=email).first():
+        return jsonify({"message": "User already exists"}), 400
+
+    hashed_password = generate_password_hash(password)
+    new_user = Users(email=email, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
 
 def list_all_users_controller():
     users = Users.query.all()

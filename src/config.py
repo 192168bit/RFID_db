@@ -2,11 +2,11 @@ import os
 
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY_ENV")
+    
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
-
     SQLALCHEMY_DATABASE_URI = os.getenv("DEVELOPMENT_DATABASE_URL")
 
 class TestingConfig(Config):

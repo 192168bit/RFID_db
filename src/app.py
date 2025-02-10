@@ -8,7 +8,7 @@ app = create_app(os.getenv("CONFIG_MODE"))
 def hello():
     return "Hello World"
 
-from .users import routes
+from .api_users import routes
 
 if __name__ == "__main__":
     app.run()
