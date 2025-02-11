@@ -1,6 +1,6 @@
 from flask import request
 
-from ..app import app
+from src.app import app
 from .controllers import (
     list_all_users_controller,
     create_user_controller,

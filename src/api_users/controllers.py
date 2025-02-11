@@ -13,7 +13,6 @@ def user_login():
 
     if user and check_password_hash(user.password, password):
         token = create_access_token(identity=user.id)
-        
         user_data = {
             "id" : user.id,
             "first_name" : user.first_name,
