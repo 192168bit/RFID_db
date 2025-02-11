@@ -1,5 +1,4 @@
 import os
-from flask import Flask
 from dotenv import load_dotenv
 from src import create_app, db
 from src.api_users.models import UserTypes, Levels, Sections, Strands 
