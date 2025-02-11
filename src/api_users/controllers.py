@@ -158,7 +158,7 @@ def log_attendance():
     user = Users.query.filter_by(rfid_tag=rfid_tag).first()
     
     attendance = Attendance(
-        user_id=user_id,
+        user_id=user.id,
         rfid_tag=rfid_tag,
         status=status
     )
