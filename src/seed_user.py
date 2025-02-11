@@ -148,19 +148,19 @@ def seed_users():
 
             db.session.add_all(users)
             db.session.commit()
-            print("✅ Users table seeded successfully!")
+            print("Users table seeded successfully!")
         except Exception as e:
             db.session.rollback()
-            print(f"❌ Error while seeding users: {e}")
+            print(f"Error while seeding users: {e}")
 
 
 def run_users():
     """Runs all seeding functions."""
     print("🔄 Seeding database...")
     seed_users()
-    print("✅ Database seeding complete!")
+    print("Database seeding complete!")
 
 
 if __name__ == "__main__":
     seed_users()
-    print("✅ Database seeding complete!")
+    print("Database seeding complete!")

@@ -52,9 +52,9 @@ def seed_attrib():
 
 def run_attrib():
     """Runs all seeding functions."""
-    print("🔄 Seeding database...")
+    print("Seeding database...")
     seed_attrib()
-    print("✅ Database seeding complete!")
+    print("Database seeding complete!")
 
 
 if __name__ == "__main__":

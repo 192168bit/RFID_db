@@ -125,3 +125,10 @@ class Strands(db.Model):
             "id": self.id,
             "strand_name": self.strand_name
         }
+
+class Events(db.Model):
+    __tablename__ = "models"
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    event_name = db.Column(db.String(255))
+    start_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
+    end_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
