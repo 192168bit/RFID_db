@@ -7,6 +7,7 @@ from .controllers import (
     list_of_students_by_level,
     list_of_students_by_section,
     list_of_students_by_strand,
+    log_attendance,
     user_login,
     user_profile,
     update_user,
@@ -55,3 +56,7 @@ def get_list_of_students_by_filter(filter_type, value):
         return list_of_students_by_strand(value)
     else:
         return "Invalid filter type", 400
+
+@app.route("/log_attendance", methods=['POST'])
+def create_log_attendance():
+    return log_attendance()

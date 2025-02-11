@@ -1,7 +1,7 @@
 from flask import jsonify, request, json, Response
 from flask_jwt_extended import create_access_token
 from src import db
-from .models import Levels, Strands, UserTypes, Users, Sections
+from .models import Attendance, Levels, Strands, UserTypes, Users, Sections
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def user_login():
@@ -61,6 +61,14 @@ def user_profile(user_id):
 def list_of_users_by_type(type):
     users_by_type = Users.query.join(UserTypes).filter(UserTypes.type_name == type).all()
     user_data = [user.toDict() for user in users_by_type]
+    
+    not_a_student = ['Faculty', 'Administrator', 'Staff']
+    
+    if type in not_a_student:
+        for user in user_data:
+            if 'student_number' in user:
+                del user['student_number']
+    
     response_data = json.dumps(user_data, sort_keys=False)
     return Response(response_data, mimetype='application/json')
 
@@ -119,7 +127,7 @@ def update_user(user_id):
     else:
         request_form = request.form.to_dict()
    
-    ignore_fields = ['type_name', 'level_name', 'section_name', 'strand_name']
+    ignore_fields = ['student_number', 'type_name', 'level_name', 'section_name', 'strand_name']
     
     for key, value in request_form.items():
         if key not in ignore_fields:
@@ -137,3 +145,44 @@ def delete_user(user_id):
     db.session.commit()
 
     return ("Account with ID '{}' deleted succesfully!").format(user_id)
+
+
+def log_attendance():
+    user_id = request.json.get('user_id')
+    rfid_tag = request.json.get('rfid_tag')
+    status = request.json.get('status', 'in')
+    
+    if status not in ['in', 'out']:
+        return jsonify({"error": "Invalid status, must be 'in' or 'out'."}), 400
+    
+    user = Users.query.filter_by(rfid_tag=rfid_tag).first()
+    
+    attendance = Attendance(
+        user_id=user_id,
+        rfid_tag=rfid_tag,
+        status=status
+    )
+    
+    db.session.add(attendance)
+    db.session.commit()    
+    
+    user_data = {
+        "first_name": user.first_name,
+        "middle_name": user.middle_name,
+        "last_name": user.last_name,
+        "level_name": user.level.level_name,
+        "section_name": user.section.section_name,
+        "strand_name": user.strand.strand_name
+    }
+    
+    response_data = {
+        "attendance": {
+            "user_id": attendance.user.id,
+            "rfid_tag": attendance.rfid_tag,
+            "status": attendance.status,
+            "timestamp": attendance.timestamp.isoformat()
+        },
+        "user": user_data
+    }
+    
+    return Response(json.dumps(response_data, sort_keys=False), mimetype='application/json', status=201)

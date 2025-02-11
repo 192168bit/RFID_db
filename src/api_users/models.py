@@ -1,15 +1,17 @@
-from collections import OrderedDict
+import uuid
+
+from sqlalchemy import func
 from src import db
-from sqlalchemy import Column, Integer, String, ForeignKey
 from datetime import datetime, timezone
-from sqlalchemy.orm import relationship
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 
 
 
 class Users(db.Model):
     __tablename__ = "users"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.String, primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    rfid_tag = db.Column(db.String(255), unique=True, nullable=False)
+    student_number = db.Column(db.Integer, autoincrement=True, unique=True, nullable=True)
     first_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
@@ -30,11 +32,11 @@ class Users(db.Model):
     strand_id = db.Column(db.Integer, db.ForeignKey("strands.id"), nullable=True)
     strand = db.relationship("Strands", backref="user", lazy=True)
 
-    attendance = db.relationship("Attendance", backref="user", lazy=True)
-    
     def toDict(self):
        return   {
            "id": self.id,
+           "rfid_tag": self.rfid_tag,
+           "student_number": self.student_number,
            "first_name": self.first_name,
            "middle_name": self.middle_name,
            "last_name": self.last_name,
@@ -61,7 +63,7 @@ class Users(db.Model):
 
 class UserTypes(db.Model):
     __tablename__ = "usertypes"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
     type_name = db.Column(db.String, unique=True, nullable=False)
 
     
@@ -74,10 +76,12 @@ class UserTypes(db.Model):
 
 class Attendance(db.Model):
     __tablename__ = "attendance"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
-    status = db.Column(db.String(100), nullable=False)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    id = db.Column(db.String, primary_key=True, nullable=True, default=lambda: str(uuid.uuid4()))
+    rfid_tag = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=func.now(), server_default=func.now())
+    status = db.Column(db.String(100), nullable=True)    
+    user_id = db.Column(db.String, db.ForeignKey("users.id"), nullable=False)
+    user = db.relationship('Users', backref='attendances')
         
     def toDict(self):
         return {
@@ -88,7 +92,7 @@ class Attendance(db.Model):
 
 class Levels(db.Model):
     __tablename__ = "levels"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
     level_name = db.Column(db.String, unique=True, nullable=False)
 
 
@@ -100,7 +104,7 @@ class Levels(db.Model):
 
 class Sections(db.Model):
     __tablename__ = "sections"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
     section_name = db.Column(db.String, unique=True, nullable=False)
  
 
@@ -112,7 +116,7 @@ class Sections(db.Model):
 
 class Strands(db.Model):
     __tablename__ = "strands"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True, unique=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
     strand_name = db.Column(db.String, unique=True, nullable=False)
 
     
