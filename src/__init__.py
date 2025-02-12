@@ -1,6 +1,7 @@
 from datetime import timedelta
 import os
 from flask import Flask
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ jwt = JWTManager()
 
 def create_app(config_mode=None):
     app = Flask(__name__)
+    CORS(app)
     config_mode = config_mode or os.getenv("CONFIG_MODE", "development")
     app.config.from_object(config[config_mode])
     

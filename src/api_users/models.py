@@ -11,7 +11,6 @@ class Users(db.Model):
     __tablename__ = "users"
     id = db.Column(db.String, primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
     rfid_tag = db.Column(db.String(255), unique=True, nullable=False)
-    student_number = db.Column(db.Integer, autoincrement=True, unique=True, nullable=True)
     first_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
@@ -36,7 +35,6 @@ class Users(db.Model):
        return   {
            "id": self.id,
            "rfid_tag": self.rfid_tag,
-           "student_number": self.student_number,
            "first_name": self.first_name,
            "middle_name": self.middle_name,
            "last_name": self.last_name,
