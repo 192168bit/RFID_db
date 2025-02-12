@@ -125,10 +125,23 @@ class Strands(db.Model):
             "id": self.id,
             "strand_name": self.strand_name
         }
-
+        
+        
 class Events(db.Model):
-    __tablename__ = "models"
+    __tablename__ = "events"
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     event_name = db.Column(db.String(255))
-    start_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
-    end_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
+    event_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
+    
+    def toDict(self):
+        return {
+            "id": self.id,
+            "event_name": self.event_name,
+            "event_date": self.event_date
+        }
+    
+class RFIDs(db.Model):
+    __tablename__ = "rfids"
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    rfid_name = db.Column(db.String, unique=True)
+    kiosk_name = db.Column(db.String, unique=True)
