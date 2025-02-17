@@ -1,5 +1,5 @@
 from flask import jsonify, request, json, Response
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from src import db
 from .models import Attendance, Levels, Strands, UserTypes, Users, Sections
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -34,51 +34,48 @@ def user_login():
     error_response = json.dumps({"message": "Invalid credentials"})
     return Response(error_response, status=401, mimetype="application/json")
 
-
-# REGISTER    
-def register():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-
-    if Users.query.filter_by(email=email).first():
-        return jsonify({"message": "User already exists"}), 400
-
-    hashed_password = generate_password_hash(password)
-    new_user = Users(email=email, password=hashed_password)
-    db.session.add(new_user)
-    db.session.commit()
     
 # CREATE USER
+@jwt_required()  # Require authentication
 def create_user_controller():
     request_data = request.get_json()
     
+    # Get the logged-in user's identity (it should be a dictionary)
+    current_user = get_jwt_identity()
+
+    # Ensure we are dealing with a dictionary
+    if not isinstance(current_user, dict) or "role" not in current_user:
+        return jsonify({"message": "Invalid token format."}), 401
+
+    # Check if the user is an admin
+    if current_user["role"] != "admin":
+        return jsonify({"message": "Access denied. Admins only."}), 403
+
+    # Check if user already exists
     if Users.query.filter_by(email=request_data["email"]).first():
         return jsonify({"message": "User already exists"}), 400
 
+    # Create a new user
     new_user = Users(
         rfid_tag=request_data["rfid_tag"],
-        student_number=request_data["student_number"],
+
         first_name=request_data["first_name"],
         middle_name=request_data["middle_name"],
         last_name=request_data["last_name"],
         contact_num=request_data["contact_num"],
         address=request_data["address"],
         email=request_data["email"],
-        password=request_data["password"],
+        password=generate_password_hash(request_data["password"]),
         type_id=request_data["type_id"],
         level_id=request_data["level_id"],
         section_id=request_data["section_id"],
         strand_id=request_data["strand_id"],
     )
 
-    new_user.password = generate_password_hash(new_user.password)
-
     db.session.add(new_user)
     db.session.commit()
     
-    new_user = new_user.toDict()
-    response_data = json.dumps(new_user, sort_keys=False)
+    response_data = json.dumps(new_user.toDict(), sort_keys=False)
     return Response(response_data, mimetype='application/json'), 201
 
 # LISTING ALL USERS
@@ -145,6 +142,24 @@ def get_strands():
     strands = Strands.query.all()
     strand_data = [{"id": strand.id, "name": strand.strand_name} for strand in strands]
     return jsonify(strand_data)
+
+def get_personnel():
+    type_name = request.args.get("type_name")
+
+    query = Users.query
+
+    if type_name:
+        query = query.filter(Users.type == type_name)
+
+    personnels = query.all()
+    personnel_data = [personnel.toDict() for personnel in personnels]
+
+    return Response(json.dumps(personnel_data, sort_keys=False), mimetype="application/json", status=200)
+
+def get_types():
+    types = UserTypes.query.all()
+    type_data = [{"id": type.id, "name": type.type_name} for type in types]
+    return jsonify(type_data)
 
 
 # UPDATING USER INFO

@@ -5,9 +5,11 @@ from .models import Users
 from src.app import app
 from .controllers import (
     get_levels,
+    get_personnel,
     get_sections,
     get_strands,
     get_students,
+    get_types,
     list_all_users_controller,
     create_user_controller,
     log_attendance,
@@ -15,7 +17,6 @@ from .controllers import (
     user_profile,
     update_user,
     delete_user,
-    list_of_users_by_type,
 )
 
 @app.route("/login", methods=["POST"])
@@ -54,15 +55,15 @@ def profile_update_delete_user(user_id):
         return "Method is Not Allowed"
 
 
-@app.route("/types/<type>", methods=["GET"])
+@app.route("/personnel", methods=["GET"])
 @jwt_required()
-def get_user_type(type):
-    current_user_id = get_jwt_identity()
-    user = Users.query.get(current_user_id)
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-    return list_of_users_by_type(type)
+def personnel():
+    return get_personnel()
 
+@app.route("/types", methods=["GET"])
+@jwt_required()
+def types():
+    return get_types()
 
 @app.route("/students", methods=["GET"])
 @jwt_required()
