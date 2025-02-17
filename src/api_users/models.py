@@ -9,8 +9,8 @@ from werkzeug.security import check_password_hash
 
 class Users(db.Model):
     __tablename__ = "users"
-    id = db.Column(db.String, primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
-    rfid_tag = db.Column(db.String(255), unique=True, nullable=False)
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    rfid_tag = db.Column(db.String(255), nullable=False, default=lambda: str(uuid.uuid4()))
     first_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
@@ -74,7 +74,7 @@ class UserTypes(db.Model):
 
 class Attendance(db.Model):
     __tablename__ = "attendance"
-    id = db.Column(db.String, primary_key=True, nullable=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
     rfid_tag = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=func.now(), server_default=func.now())
     status = db.Column(db.String(100), nullable=True)    
@@ -90,7 +90,7 @@ class Attendance(db.Model):
 
 class Levels(db.Model):
     __tablename__ = "levels"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
     level_name = db.Column(db.String, unique=True, nullable=False)
 
 
@@ -102,7 +102,7 @@ class Levels(db.Model):
 
 class Sections(db.Model):
     __tablename__ = "sections"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
     section_name = db.Column(db.String, unique=True, nullable=False)
  
 
@@ -114,7 +114,7 @@ class Sections(db.Model):
 
 class Strands(db.Model):
     __tablename__ = "strands"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
     strand_name = db.Column(db.String, unique=True, nullable=False)
 
     
@@ -127,7 +127,7 @@ class Strands(db.Model):
         
 class Events(db.Model):
     __tablename__ = "events"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
     event_name = db.Column(db.String(255))
     event_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
     
@@ -140,6 +140,6 @@ class Events(db.Model):
     
 class RFIDs(db.Model):
     __tablename__ = "rfids"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
     rfid_name = db.Column(db.String, unique=True)
     kiosk_name = db.Column(db.String, unique=True)

@@ -8,17 +8,16 @@ from src.api_users.models import Users
 
 load_dotenv()
 
+
 def seed_users():
     """Seeds the users table with initial data."""
     app = create_app(os.getenv("CONFIG_MODE"))
     with app.app_context():
         print("Seeding database...")
-        
-        
+
         try:
             users = [
                 Users(
-                    rfid_tag= "mock_rfid_12345",
                     first_name="Isaac1",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -32,7 +31,6 @@ def seed_users():
                     strand_id=1,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_22345",
                     first_name="Isaac2",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -46,7 +44,6 @@ def seed_users():
                     strand_id=2,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_32345",
                     first_name="Isaac3",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -60,7 +57,6 @@ def seed_users():
                     strand_id=3,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_42345",
                     first_name="Isaac4",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -74,7 +70,6 @@ def seed_users():
                     strand_id=1,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_52345",
                     first_name="Isaac5",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -88,7 +83,6 @@ def seed_users():
                     strand_id=2,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_62345",
                     first_name="Isaac6",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -102,7 +96,6 @@ def seed_users():
                     strand_id=3,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_72345",
                     first_name="Isaac7",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -116,7 +109,6 @@ def seed_users():
                     strand_id=None,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_82345",
                     first_name="Isaac8",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -130,7 +122,6 @@ def seed_users():
                     strand_id=None,
                 ),
                 Users(
-                    rfid_tag= "mock_rfid_92345",
                     first_name="Isaac9",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -144,7 +135,6 @@ def seed_users():
                     strand_id=None,
                 ),
             ]
-
 
             db.session.add_all(users)
             db.session.commit()
