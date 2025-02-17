@@ -1,0 +1,21 @@
+url "/login" via POST method 
+- Logging In
+
+url "/users" via GET and POST methods 
+- Getting the list of Users and Creating a User
+
+url "/users/<user_id> via GET, PUT and DELETE methods 
+- Directs to the User profile.
+- Updates the User details
+- Deletion of User
+
+url "/types/<type> via GET method
+- List all Users with the same type (Students, Faculty, Administrator, Staff)
+
+url "/students/<filter_type>/<value> via GET method
+- Filter Types: "/students/<level>/<11>
+                "/students/<section>/<HUMILITY>
+                "/students/<strand>/<STEM>
+
+url "/log_attendance via POST method
+- Logs the attendance whenever the User taps the RFID Card

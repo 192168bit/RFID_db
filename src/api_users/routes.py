@@ -4,11 +4,12 @@ from .models import Users
 
 from src.app import app
 from .controllers import (
+    get_levels,
+    get_sections,
+    get_strands,
+    get_students,
     list_all_users_controller,
     create_user_controller,
-    list_of_students_by_level,
-    list_of_students_by_section,
-    list_of_students_by_strand,
     log_attendance,
     user_login,
     user_profile,
@@ -63,21 +64,25 @@ def get_user_type(type):
     return list_of_users_by_type(type)
 
 
-@app.route("/students/<filter_type>/<value>", methods=["GET"])
+@app.route("/students", methods=["GET"])
 @jwt_required()
-def get_list_of_students_by_filter(filter_type, value):
-    current_user_id = get_jwt_identity()
-    user = Users.query.get(current_user_id)
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-    if filter_type == "level":
-        return list_of_students_by_level(value)
-    elif filter_type == "section":
-        return list_of_students_by_section(value)
-    elif filter_type == "strand":
-        return list_of_students_by_strand(value)
-    else:
-        return "Invalid filter type", 400
+def students():
+    return get_students()
+
+# Get all levels
+@app.route("/levels", methods=["GET"])
+def levels():
+    return get_levels()
+
+# Get all sections
+@app.route("/sections", methods=["GET"])
+def sections():
+    return get_sections()
+
+# Get all strands
+@app.route("/strands", methods=["GET"])
+def strands():
+    return get_strands()
 
 @app.route("/log_attendance", methods=['POST'])
 def create_log_attendance():

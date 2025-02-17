@@ -20,7 +20,8 @@ def user_login():
             "first_name" : user.first_name,
             "middle_name" : user.middle_name,
             "last_name" : user.last_name,
-            "email" : user.email
+            "email" : user.email,
+            "type" : user.type.type_name
         }
         response_data = {
             "user": user_data,
@@ -108,26 +109,43 @@ def list_of_users_by_type(type):
     response_data = json.dumps(user_data, sort_keys=False)
     return Response(response_data, mimetype='application/json', status=200)
 
-# LIST OF STUDENTS BY LEVEL
-def list_of_students_by_level(level):
-    student_level = Users.query.join(Levels).filter(Levels.level_name == level).all()
-    user_data = [user.toDict() for user in student_level]
-    response_data = json.dumps(user_data, sort_keys=False)
-    return Response(response_data, mimetype='application/json', status=200)
+def get_students():
+    level_id = request.args.get("level_id")
+    section_id = request.args.get("section_id")
+    strand_id = request.args.get("strand_id")
 
-# LIST OF STUDENTS BY SECTION
-def list_of_students_by_section(section):
-    student_section = Users.query.join(Sections).filter(Sections.section_name == section).all()
-    user_data = [users.toDict() for users in student_section]
-    response_data = json.dumps(user_data, sort_keys=False)
-    return Response(response_data, mimetype='application/json', status=200)
+    query = Users.query
 
-# LIST OF STUDENTS BY STRAND
-def list_of_students_by_strand(strand):
-    student_strand = Users.query.join(Strands).filter(Strands.strand_name == strand).all()
-    user_data = [users.toDict() for users in student_strand]
-    response_data = json.dumps(user_data, sort_keys=False)
-    return Response(response_data, mimetype='application/json', status=200)
+    if level_id:
+        query = query.filter(Users.level_id == level_id)
+    if section_id:
+        query = query.filter(Users.section_id == section_id)
+    if strand_id:
+        query = query.filter(Users.strand_id == strand_id)
+
+    students = query.all()
+    student_data = [student.toDict() for student in students]
+
+    return Response(json.dumps(student_data, sort_keys=False), mimetype="application/json", status=200)
+
+# Fetch all levels
+def get_levels():
+    levels = Levels.query.all()
+    level_data = [{"id": level.id, "name": level.level_name} for level in levels]
+    return jsonify(level_data)
+
+# Fetch all sections
+def get_sections():
+    sections = Sections.query.all()
+    section_data = [{"id": section.id, "name": section.section_name} for section in sections]
+    return jsonify(section_data)
+
+# Fetch all strands
+def get_strands():
+    strands = Strands.query.all()
+    strand_data = [{"id": strand.id, "name": strand.strand_name} for strand in strands]
+    return jsonify(strand_data)
+
 
 # UPDATING USER INFO
 def update_user(user_id):
