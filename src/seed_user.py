@@ -18,6 +18,7 @@ def seed_users():
         try:
             users = [
                 Users(
+                    photo_url="",
                     first_name="Isaac1",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -31,6 +32,7 @@ def seed_users():
                     strand_id=1,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac2",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -44,6 +46,7 @@ def seed_users():
                     strand_id=2,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac3",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -57,6 +60,7 @@ def seed_users():
                     strand_id=3,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac4",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -70,6 +74,7 @@ def seed_users():
                     strand_id=1,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac5",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -83,6 +88,7 @@ def seed_users():
                     strand_id=2,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac6",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -96,6 +102,7 @@ def seed_users():
                     strand_id=3,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac7",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -109,6 +116,7 @@ def seed_users():
                     strand_id=None,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac8",
                     middle_name="Isaac",
                     last_name="Isaac",
@@ -122,6 +130,7 @@ def seed_users():
                     strand_id=None,
                 ),
                 Users(
+                    photo_url="",
                     first_name="Isaac9",
                     middle_name="Isaac",
                     last_name="Isaac",

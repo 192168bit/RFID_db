@@ -11,6 +11,7 @@ class Users(db.Model):
     __tablename__ = "users"
     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
     rfid_tag = db.Column(db.String(255), nullable=False, default=lambda: str(uuid.uuid4()))
+    photo_url = db.Column(db.String(225), nullable=True)
     first_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)

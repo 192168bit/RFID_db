@@ -42,24 +42,19 @@ def user_login():
 def create_user_controller():
     request_data = request.get_json()
 
-    # Get the logged-in user's identity (which is a JSON string in this case)
     current_user = json.loads(get_jwt_identity())
 
-    # Ensure we are dealing with a dictionary and that it contains the 'role' key
     if not isinstance(current_user, dict) or "role" not in current_user:
         return jsonify({"message": "Invalid token format."}), 401
 
-    # Check if the user is an admin
-    if current_user["role"] != "Administrator":
+    if current_user["role"] != "Administration":
         return jsonify({"message": "Access denied. Admins only."}), 403
 
-    # Check if user already exists
     if Users.query.filter_by(email=request_data["email"]).first():
         return jsonify({"message": "User already exists"}), 400
 
     # Create a new user
     new_user = Users(
-        rfid_tag=request_data["rfid_tag"],
         first_name=request_data["first_name"],
         middle_name=request_data["middle_name"],
         last_name=request_data["last_name"],
@@ -102,7 +97,7 @@ def list_of_users_by_type(type):
     )
     user_data = [user.toDict() for user in users_by_type]
 
-    not_a_student = ["Faculty", "Administrator", "Staff"]
+    not_a_student = ["Faculty", "Administration", "Staff"]
 
     if type in not_a_student:
         for user in user_data:
@@ -118,8 +113,12 @@ def get_students():
     section_id = request.args.get("section_id")
     strand_id = request.args.get("strand_id")
 
-    query = Users.query
+    # Create the initial query
+    query = (
+        db.session.query(Users).join(UserTypes).filter(UserTypes.type_name == "Student")
+    )
 
+    # Apply filters if provided
     if level_id:
         query = query.filter(Users.level_id == level_id)
     if section_id:
@@ -127,9 +126,13 @@ def get_students():
     if strand_id:
         query = query.filter(Users.strand_id == strand_id)
 
+    # Execute the query and get all students
     students = query.all()
+
+    # Convert students to dictionaries using toDict() method
     student_data = [student.toDict() for student in students]
 
+    # Return the JSON response
     return Response(
         json.dumps(student_data, sort_keys=False),
         mimetype="application/json",
@@ -165,7 +168,7 @@ def get_personnel():
     query = Users.query
 
     # Define list of non-personnel types that shouldn't appear as "personnel"
-    non_personnel_types = ['Student']
+    non_personnel_types = ["Student"]
 
     if type_id:
         try:
@@ -175,7 +178,9 @@ def get_personnel():
             return jsonify({"error": "Invalid type_id format"}), 400
     else:
         # Filter out students by excluding user types associated with students
-        query = query.join(UserTypes).filter(~UserTypes.type_name.in_(non_personnel_types))
+        query = query.join(UserTypes).filter(
+            ~UserTypes.type_name.in_(non_personnel_types)
+        )
 
     personnels = query.all()
     personnel_data = [personnel.toDict() for personnel in personnels]
@@ -233,38 +238,62 @@ def delete_user(user_id):
 
 # LOGGING ATTENDANCE RECORD
 def log_attendance():
-    user_id = request.json.get("user_id")
     rfid_tag = request.json.get("rfid_tag")
-    status = request.json.get("status", "in")
 
-    if status not in ["in", "out"]:
-        return jsonify({"error": "Invalid status, must be 'in' or 'out'."}), 400
+    if not rfid_tag:
+        return jsonify({"error": "RFID tag is required"}), 400
 
+    # Find the user based on RFID tag
     user = Users.query.filter_by(rfid_tag=rfid_tag).first()
-
     if user is None:
         return jsonify({"error": "User not found"}), 401
 
-    attendance = Attendance(user_id=user.id, rfid_tag=rfid_tag, status=status)
+    # Get the current date and time
+    current_time = datetime.now()
+    start_of_day = datetime(
+        current_time.year, current_time.month, current_time.day, 0, 0, 0
+    )
+    end_of_day = datetime(
+        current_time.year, current_time.month, current_time.day, 23, 59, 59
+    )
 
-    db.session.add(attendance)
+    # Check attendance for today
+    today_attendance = (
+        Attendance.query.filter(
+            Attendance.user_id == user.id,
+            Attendance.timestamp.between(start_of_day, end_of_day),
+        )
+        .order_by(Attendance.timestamp)
+        .all()
+    )
+
+    # if not today_attendance:
+    # First scan → Log "Time In"
+    new_attendance = Attendance(
+        user_id=user.id, rfid_tag=rfid_tag, status="in", timestamp=current_time
+    )
+    db.session.add(new_attendance)
     db.session.commit()
 
-    response_data = {
-        "attendance": {
-            "user_id": attendance.user.id,
-            "rfid_tag": attendance.rfid_tag,
-            "status": attendance.status,
-            "timestamp": attendance.timestamp.isoformat(),
-        },
-    }
+    # Call `calculate_attendance_percentage()` after logging time-in (no need to pass time_in)
+    return calculate_attendance_percentage()  # Removed 'time_in'
 
-    return Response(
-        json.dumps(response_data, sort_keys=False),
-        mimetype="application/json",
-        status=201,
-    )
-    
+    # elif len(today_attendance) == 1:
+    #     # Second scan → Log "Time Out"
+    #     new_attendance = Attendance(
+    #         user_id=user.id, rfid_tag=rfid_tag, status="out", timestamp=current_time
+    #     )
+    #     db.session.add(new_attendance)
+    #     db.session.commit()
+
+    #     # Call `calculate_attendance_percentage()` after logging time-out (no need to pass time_out)
+    #     return calculate_attendance_percentage()  # Removed 'time_out'
+
+    # else:
+    #     # Prevent multiple entries (already logged in and out today)
+    #     return jsonify({"error": "User already logged in and out today"}), 400
+
+
 def get_attendance():
     # Get the selected year, month, and day from the query params
     year = request.args.get("year", type=int)
@@ -299,53 +328,46 @@ def get_attendance():
         status=201,
     )
 
+
 def get_latest_attendance():
-    # Query to get the latest attendance record
     latest_attendance = Attendance.query.order_by(Attendance.timestamp.desc()).first()
 
-    # If no attendance records are found, return an error
     if not latest_attendance:
         return jsonify({"error": "No attendance records found."}), 404
 
-    # Fetch the user associated with the latest attendance
     user = Users.query.filter_by(id=latest_attendance.user_id).first()
 
-    # If the user is not found, return an error
     if not user:
         return jsonify({"error": "User not found."}), 404
 
-    # Prepare user data for the response
     user_data = {
         "rfid_tag": latest_attendance.rfid_tag,
         "status": latest_attendance.status,
         "first_name": user.first_name,
         "middle_name": user.middle_name,
         "last_name": user.last_name,
-        "email" : user.email,
+        "email": user.email,
     }
 
-    # Include student-specific data (level, section, strand) only if the user is a student
     if user.type.type_name == "Student":
-        user_data.update({
-            "level_name": user.level.level_name if user.level else "N/A",
-            "section_name": user.section.section_name if user.section else "N/A",
-            "strand_name": user.strand.strand_name if user.strand else "N/A",
-        })
+        user_data.update(
+            {
+                "level_name": user.level.level_name if user.level else "N/A",
+                "section_name": user.section.section_name if user.section else "N/A",
+                "strand_name": user.strand.strand_name if user.strand else "N/A",
+            }
+        )
     else:
-        # For non-student users, include role or any other relevant user-specific info
-        user_data.update({
-            "role": user.type.type_name,  # Assuming you want to include role for non-student users
-        })
-
-    # Prepare the response data
+        user_data.update(
+            {
+                "role": user.type.type_name,
+            }
+        )
     attendance_data = {
-        "attendance": {
-            "user_id": latest_attendance.user_id,
-            "rfid_tag": latest_attendance.rfid_tag,
-            "status": latest_attendance.status,
-            "timestamp": latest_attendance.timestamp.isoformat(),
-        },
         "user": user_data,
+        "rfid_tag": latest_attendance.rfid_tag,
+        "status": latest_attendance.status,
+        "timestamp": latest_attendance.timestamp.isoformat(),
     }
 
     return Response(
@@ -353,3 +375,65 @@ def get_latest_attendance():
         mimetype="application/json",
         status=200,
     )
+
+
+def calculate_attendance_percentage():
+    """Calculate the percentage of students and personnel who have timed in."""
+    student_type = "Student"
+
+    # Get total count of students and personnel
+    total_students = (
+        Users.query.join(UserTypes).filter(UserTypes.type_name == student_type).count()
+    )
+    total_personnel = (
+        Users.query.join(UserTypes).filter(UserTypes.type_name != student_type).count()
+    )
+
+    # If no registered users are found
+    if total_students == 0 and total_personnel == 0:
+        return jsonify({"error": "No registered users"}), 400
+
+    # Start of day (00:00:00)
+    start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Calculate number of students who are timed in (status == 'in')
+    timed_in_students = (
+        Attendance.query.join(Users)
+        .join(UserTypes)
+        .filter(
+            Attendance.status == "in",
+            Attendance.timestamp >= start_of_day,
+            UserTypes.type_name == student_type,
+        )
+        .distinct(Attendance.user_id)
+        .count()
+    )
+
+    # Calculate number of personnel who are timed in (status == 'in')
+    timed_in_personnel = (
+        Attendance.query.join(Users)
+        .join(UserTypes)
+        .filter(
+            Attendance.status == "in",
+            Attendance.timestamp >= start_of_day,
+            UserTypes.type_name != student_type,
+        )
+        .distinct(Attendance.user_id)
+        .count()
+    )
+
+    # Calculate attendance percentages
+    student_attendance_percentage = (
+        (timed_in_students / total_students * 100) if total_students > 0 else 0
+    )
+    personnel_attendance_percentage = (
+        (timed_in_personnel / total_personnel * 100) if total_personnel > 0 else 0
+    )
+
+    # Format response data
+    response_data = {
+        "student_attendance_percentage": f"{student_attendance_percentage:.2f}%",
+        "personnel_attendance_percentage": f"{personnel_attendance_percentage:.2f}%",
+    }
+
+    return jsonify(response_data), 200
