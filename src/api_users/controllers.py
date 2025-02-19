@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import date, datetime
+import os
 from flask import jsonify, request, json, Response
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from sqlalchemy import distinct
 from src import db
+from src.config import ALLOWED_EXTENSIONS, BASE_URL, UPLOAD_FOLDER
 from .models import Attendance, Levels, Strands, UserTypes, Users, Sections
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 
 # USER LOGIN
@@ -40,31 +44,39 @@ def user_login():
 # CREATE USER
 @jwt_required()  # Require authentication
 def create_user_controller():
-    request_data = request.get_json()
-
+    
     current_user = json.loads(get_jwt_identity())
-
+    photo_url = ""
+    file = request.files.get('photo_url')
+    print(file)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        photo_url = f"{BASE_URL}/uploads/{filename}"
+        
     if not isinstance(current_user, dict) or "role" not in current_user:
         return jsonify({"message": "Invalid token format."}), 401
 
     if current_user["role"] != "Administration":
         return jsonify({"message": "Access denied. Admins only."}), 403
 
-    if Users.query.filter_by(email=request_data["email"]).first():
+    if Users.query.filter_by(email=request.form.get("email")).first():
         return jsonify({"message": "User already exists"}), 400
 
     # Create a new user
     new_user = Users(
-        first_name=request_data["first_name"],
-        middle_name=request_data["middle_name"],
-        last_name=request_data["last_name"],
-        contact_num=request_data["contact_num"],
-        email=request_data["email"],
-        password=generate_password_hash(request_data["password"]),
-        type_id=request_data["type_id"],
-        level_id=request_data["level_id"],
-        section_id=request_data["section_id"],
-        strand_id=request_data["strand_id"],
+        first_name=request.form.get("first_name"),
+        middle_name=request.form.get("middle_name"),
+        last_name=request.form.get("last_name"),
+        contact_num=request.form.get("contact_num"),
+        photo_url=photo_url,
+        email=request.form.get("email"),
+        password=generate_password_hash(request.form.get("password")),
+        type_id=request.form.get("type_id"),
+        level_id=request.form.get("level_id"),
+        section_id=request.form.get("section_id"),
+        strand_id=request.form.get("strand_id"),
     )
 
     db.session.add(new_user)
@@ -112,7 +124,7 @@ def get_students():
     section_id = request.args.get("section_id")
     strand_id = request.args.get("strand_id")
 
-    # Create the initial query
+    # Start the query
     query = (
         db.session.query(Users).join(UserTypes).filter(UserTypes.type_name == "Student")
     )
@@ -125,19 +137,13 @@ def get_students():
     if strand_id:
         query = query.filter(Users.strand_id == strand_id)
 
+    # Apply sorting
+    query = query.order_by(Users.level_id, Users.section_id, Users.strand_id)
+
     students = query.all()
 
     student_data = []
     for student in students:
-        attendance_records = Attendance.query.filter(
-            Attendance.user_id == student.id
-        ).all()
-
-        attendance_data = [
-            {"status": attendance.status, "timestamp": attendance.timestamp.isoformat()}
-            for attendance in attendance_records
-        ]
-
         student_data.append(
             {
                 "id": student.id,
@@ -148,7 +154,6 @@ def get_students():
                 "level_id": student.level_id,
                 "section_id": student.section_id,
                 "strand_id": student.strand_id,
-                "attendance": attendance_data,
             }
         )
 
@@ -183,45 +188,27 @@ def get_strands():
 
 
 def get_personnel():
-    type_id = request.args.get("type_id")
-    query = Users.query
+    type_id = request.args.get("type_id", type=int)
 
-    # Define list of non-personnel types that shouldn't appear as "personnel"
-    non_personnel_types = ["Student"]
+    # Exclude students, only fetch personnel
+    query = Users.query.join(UserTypes).filter(~UserTypes.type_name.in_(["Student"]))
 
     if type_id:
-        try:
-            type_id = int(type_id)  # Ensure type_id is an integer
-            query = query.filter(Users.type_id == type_id)
-        except ValueError:
-            return jsonify({"error": "Invalid type_id format"}), 400
-    else:
-        # Filter out students by excluding user types associated with students
-        query = query.join(UserTypes).filter(~UserTypes.type_name.in_(non_personnel_types))
+        query = query.filter(Users.type_id == type_id)
 
     personnels = query.all()
 
-    personnel_data = []
-    for personnel in personnels:
-        attendance_records = Attendance.query.filter(Attendance.user_id == personnel.id).all()
-        
-        attendance_data = [
-            {
-                "status": attendance.status,
-                "timestamp": attendance.timestamp.isoformat()
-            }
-            for attendance in attendance_records
-        ]
-        
-        personnel_data.append({
+    personnel_data = [
+        {
             "id": personnel.id,
             "first_name": personnel.first_name,
             "middle_name": personnel.middle_name,
             "last_name": personnel.last_name,
             "contact_num": personnel.contact_num,
             "type_id": personnel.type_id,
-            "attendance": attendance_data
-        })
+        }
+        for personnel in personnels
+    ]
 
     return Response(
         json.dumps(personnel_data, sort_keys=False),
@@ -276,6 +263,7 @@ def delete_user(user_id):
 
 # LOGGING ATTENDANCE RECORD
 def log_attendance():
+    """Logs student or personnel attendance based on RFID scans."""
     rfid_tag = request.json.get("rfid_tag")
 
     if not rfid_tag:
@@ -288,68 +276,103 @@ def log_attendance():
 
     # Get the current date and time
     current_time = datetime.now()
-    start_of_day = datetime(current_time.year, current_time.month, current_time.day, 0, 0, 0)
-    end_of_day = datetime(current_time.year, current_time.month, current_time.day, 23, 59, 59)
+    start_of_day = datetime.combine(current_time.date(), datetime.min.time())
+    end_of_day = datetime.combine(current_time.date(), datetime.max.time())
 
-    # Check attendance for today
+    # Check today's attendance record
     today_attendance = (
         Attendance.query.filter(
             Attendance.user_id == user.id,
-            Attendance.timestamp.between(start_of_day, end_of_day),
+            Attendance.timestamp >= start_of_day,
+            Attendance.timestamp <= end_of_day,
         )
         .order_by(Attendance.timestamp)
-        .all()
+        .first()
     )
+
+    # Format time in 12-hour format with AM/PM
+    def format_time(timestamp):
+        return timestamp.strftime("%I:%M:%S %p") if timestamp else None
 
     if not today_attendance:
         # First scan → Log "Time In"
         new_attendance = Attendance(
-            user_id=user.id, rfid_tag=rfid_tag, status="in", timestamp=current_time
+            user_id=user.id,
+            rfid_tag=rfid_tag,
+            status="in",
+            timestamp=current_time,
+            time_in=current_time,
+            time_out=None,  # Ensure time_out starts as None
         )
         db.session.add(new_attendance)
-        db.session.commit()
 
-        return jsonify({
-            "message": "Time In recorded",
-            "time_in": str(current_time)
-        })
+        # Commit the transaction and add logging
+        try:
+            db.session.commit()
+            print(
+                f"Attendance logged for user {user.id}: time_in={new_attendance.time_in}"
+            )
+        except Exception as e:
+            db.session.rollback()  # Rollback in case of error
+            return jsonify({"error": f"Failed to log attendance: {str(e)}"}), 500
 
-    elif len(today_attendance) == 1:
-        # Second scan → Log "Time Out"
-        new_attendance = Attendance(
-            user_id=user.id, rfid_tag=rfid_tag, status="out", timestamp=current_time
-        )
-        db.session.add(new_attendance)
-        db.session.commit()
+        return jsonify(
+            {"message": "Time In recorded", "time_in": format_time(current_time)}
+        ), 200
 
-        return jsonify({
-            "message": "Time Out recorded",
-            "time_out": str(current_time)
-        })
+    elif today_attendance.time_out is None:
+        # Second scan → Log "Time Out" (only if time_out is not set)
+        today_attendance.status = "out"
+        today_attendance.time_out = current_time
+
+        # Commit the transaction and add logging
+        try:
+            db.session.commit()
+            print(
+                f"Attendance updated for user {user.id}: time_out={today_attendance.time_out}"
+            )
+        except Exception as e:
+            db.session.rollback()  # Rollback in case of error
+            return jsonify({"error": f"Failed to log time out: {str(e)}"}), 500
+
+        return jsonify(
+            {"message": "Time Out recorded", "time_out": format_time(current_time)}
+        ), 200
 
     else:
-        # Prevent multiple entries (already logged in and out today)
+        # Prevent multiple scans after logging out
         return jsonify({"error": "User already logged in and out today"}), 400
 
 
 def get_attendance():
+    # Parse query parameters
     year = request.args.get("year", type=int)
     month = request.args.get("month", type=int)
     day = request.args.get("day", type=int)
     level_id = request.args.get("level_id", type=int)
     section_id = request.args.get("section_id", type=int)
     strand_id = request.args.get("strand_id", type=int)
+    type_id = request.args.get("type_id", type=int)  # For filtering personnel types
 
-    if not year or not month or not day:
+    # Validate required parameters
+    if not all([year, month, day]):
         return jsonify({"error": "Year, month, and day are required"}), 400
 
+    # Define the start and end of the day
     start_date = datetime(year, month, day, 0, 0, 0)
     end_date = datetime(year, month, day, 23, 59, 59)
 
+    # Build the query with filters
     query = Attendance.query.join(Users).filter(
-        Attendance.timestamp.between(start_date, end_date),
-        Users.type.has(type_name="Student"),  # Ensures we only fetch student attendance
+        Attendance.timestamp.between(start_date, end_date)
     )
+
+    # Apply additional filters if provided
+    if type_id:
+        query = query.filter(Users.type_id == type_id)
+    else:
+        # Default to filtering for students if no type_id is provided
+        query = query.filter(Users.type.has(type_name="Student"))
 
     if level_id:
         query = query.filter(Users.level_id == level_id)
@@ -358,25 +381,30 @@ def get_attendance():
     if strand_id:
         query = query.filter(Users.strand_id == strand_id)
 
+    # Execute the query to fetch attendance records
     attendance_records = query.all()
-
+   
+    # Prepare the attendance data to be returned
     attendance_data = [
         {
             "id": attendance.user.id,
             "first_name": attendance.user.first_name,
+            "middle_name": attendance.user.middle_name,
             "last_name": attendance.user.last_name,
             "contact_num": attendance.user.contact_num,
+            "type_id": attendance.user.type_id,
             "status": attendance.status,
             "timestamp": attendance.timestamp.isoformat(),
+            "time_in": attendance.time_in.isoformat() if attendance.time_in else None,
+            "time_out": attendance.time_out.isoformat()
+            if attendance.time_out
+            else None,
         }
         for attendance in attendance_records
     ]
-
-    return Response(
-        json.dumps(attendance_data, sort_keys=False),
-        mimetype="application/json",
-        status=200,
-    )
+    print(attendance_data)
+    # Return the response with proper JSON formatting
+    return jsonify(attendance_data), 200
 
 
 def get_latest_attendance():
@@ -397,6 +425,7 @@ def get_latest_attendance():
         "middle_name": user.middle_name,
         "last_name": user.last_name,
         "email": user.email,
+        "photo_url": user.photo_url
     }
 
     if user.type.type_name == "Student":
@@ -428,7 +457,7 @@ def get_latest_attendance():
 
 
 def calculate_attendance_percentage():
-    """Calculate the percentage of students and personnel who have timed in."""
+    """Calculate the percentage of students and personnel who have timed in and not yet timed out."""
     student_type = "Student"
 
     # Get total count of students and personnel
@@ -443,36 +472,52 @@ def calculate_attendance_percentage():
     if total_students == 0 and total_personnel == 0:
         return jsonify({"error": "No registered users"}), 400
 
-    # Start of day (00:00:00)
-    start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # Start of day (00:00:00) for accurate filtering
+    start_of_day = datetime.combine(date.today(), datetime.min.time())
 
-    # Calculate number of students who are timed in (status == 'in')
+    # Get users who timed in today
+    timed_in_users = (
+        Attendance.query.filter(
+            Attendance.status == "in",
+            Attendance.timestamp >= start_of_day,
+        )
+        .with_entities(distinct(Attendance.user_id))
+        .subquery()
+    )
+
+    # Get users who timed out today
+    timed_out_users = (
+        Attendance.query.filter(
+            Attendance.status == "out",
+            Attendance.timestamp >= start_of_day,
+        )
+        .with_entities(distinct(Attendance.user_id))
+        .subquery()
+    )
+
+    # Count students who are still timed in (timed in but not timed out)
     timed_in_students = (
-        Attendance.query.join(Users)
-        .join(UserTypes)
+        Users.query.join(UserTypes)
         .filter(
-            Attendance.status == "in",
-            Attendance.timestamp >= start_of_day,
             UserTypes.type_name == student_type,
+            Users.id.in_(timed_in_users),  # Users who timed in
+            ~Users.id.in_(timed_out_users),  # Exclude users who timed out
         )
-        .distinct(Attendance.user_id)
         .count()
     )
 
-    # Calculate number of personnel who are timed in (status == 'in')
+    # Count personnel who are still timed in
     timed_in_personnel = (
-        Attendance.query.join(Users)
-        .join(UserTypes)
+        Users.query.join(UserTypes)
         .filter(
-            Attendance.status == "in",
-            Attendance.timestamp >= start_of_day,
             UserTypes.type_name != student_type,
+            Users.id.in_(timed_in_users),
+            ~Users.id.in_(timed_out_users),
         )
-        .distinct(Attendance.user_id)
         .count()
     )
 
-    # Calculate attendance percentages
+    # Calculate attendance percentages safely
     student_attendance_percentage = (
         (timed_in_students / total_students * 100) if total_students > 0 else 0
     )
@@ -487,3 +532,22 @@ def calculate_attendance_percentage():
     }
 
     return jsonify(response_data), 200
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def upload_image():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        return jsonify({'message': 'File uploaded successfully', 'path': file_path}), 200
+
+    return jsonify({'error': 'Invalid file type'}), 400

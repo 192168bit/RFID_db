@@ -1,4 +1,5 @@
-from flask import jsonify, request
+import os
+from flask import jsonify, request, send_from_directory
 from flask_jwt_extended import jwt_required
 from .controllers import (
     calculate_attendance_percentage,
@@ -13,13 +14,14 @@ from .controllers import (
     list_all_users_controller,
     create_user_controller,
     log_attendance,
+    upload_image,
     user_login,
     user_profile,
     update_user,
     delete_user,
 )
 from src.app import app
-
+from src.config import UPLOAD_FOLDER
 
 @app.route("/login", methods=["POST"])
 def get_user_login():
@@ -104,3 +106,13 @@ def get_one_latest_attendance():
 @app.route("/stats", methods=["GET"])
 def get_total_present():
     return calculate_attendance_percentage()
+
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    return upload_image()
+
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(os.path.abspath(UPLOAD_FOLDER), filename)

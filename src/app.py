@@ -11,4 +11,4 @@ def hello():
 from .api_users import routes
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='192.168.100.50', port=5000)
