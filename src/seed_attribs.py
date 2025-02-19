@@ -16,7 +16,7 @@ def seed_attrib():
             user_types = [
                 UserTypes(type_name="Student"),
                 UserTypes(type_name="Faculty"),
-                UserTypes(type_name="Administrator"),
+                UserTypes(type_name="Administration"),
                 UserTypes(type_name="Staff"),
             ]
             student_levels = [
