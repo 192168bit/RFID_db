@@ -1,11 +1,11 @@
 from datetime import date, datetime
 import os
 from flask import jsonify, request, json, Response
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import create_access_token, get_jwt_identity
 from sqlalchemy import distinct
 from src import db
 from src.config import ALLOWED_EXTENSIONS, BASE_URL, UPLOAD_FOLDER
-from .models import Attendance, Levels, Strands, UserTypes, Users, Sections
+from .models import Attendance, Levels, RFIDs, Strands, UserTypes, Users, Sections
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -47,12 +47,11 @@ def create_user_controller():
     current_user = json.loads(get_jwt_identity())
     photo_url = ""
     file = request.files.get('photo_url')
-    print(file)
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(file_path)
-        photo_url = f"{BASE_URL}/uploads/{filename}"
+        photo_url = f"uploads/{filename}"
         
     if not isinstance(current_user, dict) or "role" not in current_user:
         return jsonify({"message": "Invalid token format."}), 401
@@ -65,10 +64,12 @@ def create_user_controller():
 
     # Create a new user
     new_user = Users(
+        rfid_tag=request.form.get("rfid_tag"),
         first_name=request.form.get("first_name"),
         middle_name=request.form.get("middle_name"),
         last_name=request.form.get("last_name"),
         contact_num=request.form.get("contact_num"),
+        parent_phone=request.form.get("parent_phone"),
         photo_url=photo_url,
         email=request.form.get("email"),
         password=generate_password_hash(request.form.get("password")),
@@ -221,6 +222,17 @@ def get_types():
     type_data = [{"id": type.id, "name": type.type_name} for type in types]
     return jsonify(type_data)
 
+def get_rfids():
+    # Get all assigned RFID tags from the Users table
+    used_rfids = db.session.query(Users.rfid_tag).filter(Users.rfid_tag.isnot(None)).all()
+    used_rfids = {rfid[0] for rfid in used_rfids}  # Convert to a set for faster lookup
+
+    # Get all RFID tags that are NOT in used_rfids
+    available_rfids = RFIDs.query.filter(~RFIDs.rfid_tag.in_(used_rfids)).all()
+
+    # Convert the result into a JSON response
+    rfid_tag_data = [{"id": rfid.id, "name": rfid.rfid_tag} for rfid in available_rfids]
+    return jsonify(rfid_tag_data)
 
 # UPDATING USER INFO
 def update_user(user_id):
@@ -230,7 +242,6 @@ def update_user(user_id):
 
     # Get form data (since it's multipart/form-data)
     request_form = request.form.to_dict()
-
     # Fields to ignore
     ignore_fields = {"student_number", "type_name", "level_name", "section_name", "strand_name"}
 
@@ -276,6 +287,13 @@ def log_attendance():
     # Find the user based on RFID tag
     user = Users.query.filter_by(rfid_tag=rfid_tag).first()
     if user is None:
+        existing_rfid = RFIDs.query.filter_by(rfid_tag=rfid_tag).first()
+        if not existing_rfid:
+            new_rfid = RFIDs(rfid_tag=rfid_tag, timestamp=datetime.now())
+            db.session.add(new_rfid)
+            db.session.commit()
+            return jsonify({"message": "RFID saved for future registration"}), 201
+        
         return jsonify({"error": "User not found"}), 401
 
     # Get the current date and time
@@ -406,7 +424,6 @@ def get_attendance():
         }
         for attendance in attendance_records
     ]
-    print(attendance_data)
     # Return the response with proper JSON formatting
     return jsonify(attendance_data), 200
 
@@ -429,7 +446,7 @@ def get_latest_attendance():
         "middle_name": user.middle_name,
         "last_name": user.last_name,
         "email": user.email,
-        "photo_url": user.photo_url
+        "photo_url": f"{BASE_URL}/{user.photo_url}"
     }
 
     if user.type.type_name == "Student":
@@ -555,3 +572,11 @@ def upload_image():
         return jsonify({'message': 'File uploaded successfully', 'path': file_path}), 200
 
     return jsonify({'error': 'Invalid file type'}), 400
+
+def create_event():
+    event_name = request.json.get("event_name")
+
+    if not event_name:
+        return jsonify({"error": "Event name is required"}), 400
+    
+    

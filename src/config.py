@@ -2,7 +2,7 @@ import os
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'src/static/uploads')
 UPLOAD_FOLDER = "src/static/uploads"
-BASE_URL = "http://127.0.0.1:5000"  # Change this when deploying
+BASE_URL = "http://192.168.100.50:5000"  # Change this when deploying
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 

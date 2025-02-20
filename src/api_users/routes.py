@@ -7,6 +7,7 @@ from .controllers import (
     get_latest_attendance,
     get_levels,
     get_personnel,
+    get_rfids,
     get_sections,
     get_strands,
     get_students,
@@ -85,6 +86,11 @@ def sections():
 @jwt_required()
 def strands():
     return get_strands()
+
+@app.route("/rfids", methods=["GET"])
+@jwt_required()
+def rfid():
+    return get_rfids()
 
 
 @app.route("/log_attendance", methods=["POST"])

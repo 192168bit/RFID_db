@@ -9,14 +9,13 @@ from werkzeug.security import check_password_hash
 class Users(db.Model):
     __tablename__ = "users"
     id = db.Column(db.String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    rfid_tag = db.Column(
-        db.String(255), nullable=False, default=lambda: str(uuid.uuid4())
-    )
+    rfid_tag = db.Column(db.String(255), nullable=True)
     photo_url = db.Column(db.String(225), nullable=True)
     first_name = db.Column(db.String(100), nullable=False)
     middle_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     contact_num = db.Column(db.String(100), unique=True, nullable=False)
+    parent_phone = db.Column(db.String(100), unique=True, nullable=True)
     address = db.Column(db.String(200))
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -41,6 +40,7 @@ class Users(db.Model):
             "middle_name": self.middle_name,
             "last_name": self.last_name,
             "contact_num": self.contact_num,
+            "parent_phone": self.parent_phone,
             "photo_url": self.photo_url,
             "email": self.email,
             "type_id": self.type_id,
@@ -115,7 +115,7 @@ class Events(db.Model):
     __tablename__ = "events"
     id = db.Column(db.Integer, primary_key=True)
     event_name = db.Column(db.String(255))
-    event_date = db.Column(db.DateTime, default=func.now(), server_default=func.now())
+    event_date = db.Column(db.String(255))
 
     def toDict(self):
         return {
@@ -128,5 +128,5 @@ class Events(db.Model):
 class RFIDs(db.Model):
     __tablename__ = "rfids"
     id = db.Column(db.Integer, primary_key=True)
-    rfid_name = db.Column(db.String, unique=True)
-    kiosk_name = db.Column(db.String, unique=True)
+    rfid_tag = db.Column(db.String(255), unique=True)
+    timestamp = db.Column(db.DateTime, default=func.now(), server_default=func.now())
