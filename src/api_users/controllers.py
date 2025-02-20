@@ -42,7 +42,6 @@ def user_login():
 
 
 # CREATE USER
-@jwt_required()  # Require authentication
 def create_user_controller():
     
     current_user = json.loads(get_jwt_identity())
@@ -226,29 +225,34 @@ def get_types():
 # UPDATING USER INFO
 def update_user(user_id):
     user = Users.query.get(user_id)
+    if not user:
+        return Response(json.dumps({"error": "User not found"}), mimetype="application/json", status=404)
 
-    if request.get_json:
-        request_form = request.json
-    else:
-        request_form = request.form.to_dict()
+    # Get form data (since it's multipart/form-data)
+    request_form = request.form.to_dict()
 
-    ignore_fields = [
-        "student_number",
-        "type_name",
-        "level_name",
-        "section_name",
-        "strand_name",
-    ]
+    # Fields to ignore
+    ignore_fields = {"student_number", "type_name", "level_name", "section_name", "strand_name"}
 
+    # Update user fields from form data
     for key, value in request_form.items():
-        if key not in ignore_fields:
+        if key not in ignore_fields and value:  # Avoid overwriting with empty values
             setattr(user, key, value)
+
+    # Handle Image Upload
+    file = request.files.get("photo_url")  # Get file from form data
+    if file and allowed_file(file.filename):  # Validate file type
+        filename = secure_filename(f"user_{user_id}_{file.filename}")
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        user.photo_url = f"{BASE_URL}/uploads/{filename}"  # Store file URL in DB
 
     db.session.commit()
 
-    user = user.toDict()
-    response_data = json.dumps(user, sort_keys=False)
-    return Response(response_data, mimetype="application/json", status=201)
+    # Return updated user data
+    user_data = user.toDict()
+    response_data = json.dumps(user_data, sort_keys=False)
+    return Response(response_data, mimetype="application/json", status=200)
 
 
 # DELETE USER
