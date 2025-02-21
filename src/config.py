@@ -14,9 +14,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY_ENV")
     SQLALCHEMY_DATABASE_URI = os.getenv("DEVELOPMENT_DATABASE_URL")
-    TWILIO_ACCOUNT_SID = os.getenv("ACa2eaf979349c3ec0316d102dcdfd0120")
-    TWILIO_AUTH_TOKEN = os.getenv("f8d2c5d9d928c8291a20b2e172c95704")
-    TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
     
        
 class DevelopmentConfig(Config):
