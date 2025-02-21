@@ -6,7 +6,7 @@ BASE_URL = "http://192.168.100.50:5000"  # Change this when deploying
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-
+123
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
     
