@@ -116,12 +116,14 @@ class Events(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_name = db.Column(db.String(255))
     event_date = db.Column(db.String(255))
+    event_month = db.Column(db.String(50), nullable=False)
 
     def toDict(self):
         return {
             "id": self.id,
             "event_name": self.event_name,
             "event_date": self.event_date,
+            "event_month": self.event_month
         }
 
 
@@ -130,3 +132,10 @@ class RFIDs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     rfid_tag = db.Column(db.String(255), unique=True)
     timestamp = db.Column(db.DateTime, default=func.now(), server_default=func.now())
+
+    def toDict(self):
+        return {
+            "id": self.id,
+            "rfid_tag": self.rfid_tag,
+            "timestamp": self.timestamp
+        }

@@ -3,7 +3,11 @@ from flask import jsonify, request, send_from_directory
 from flask_jwt_extended import jwt_required
 from .controllers import (
     calculate_attendance_percentage,
+    create_event,
+    delete_event,
+    get_all_events,
     get_attendance,
+    get_event_by_id,
     get_latest_attendance,
     get_levels,
     get_personnel,
@@ -15,6 +19,7 @@ from .controllers import (
     list_all_users_controller,
     create_user_controller,
     log_attendance,
+    update_event,
     upload_image,
     user_login,
     user_profile,
@@ -122,3 +127,27 @@ def upload():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(os.path.abspath(UPLOAD_FOLDER), filename)
+
+@app.route("/events", methods=["GET"])
+def get_events():
+    return get_all_events()
+
+# Fetch a single event by ID
+@app.route("/events/<int:event_id>", methods=["GET"])
+def get_event(event_id):
+    return get_event_by_id(event_id)
+
+# Create a new event
+@app.route("/events", methods=["POST"])
+def add_event():
+    return create_event()
+
+# Update an existing event
+@app.route("/events/<int:event_id>", methods=["PUT"])
+def modify_event(event_id):
+    return update_event(event_id)
+
+# Delete an event
+@app.route("/events/<int:event_id>", methods=["DELETE"])
+def remove_event(event_id):
+    return delete_event(event_id)

@@ -5,7 +5,7 @@ from flask_jwt_extended import create_access_token, get_jwt_identity
 from sqlalchemy import distinct
 from src import db
 from src.config import ALLOWED_EXTENSIONS, BASE_URL, UPLOAD_FOLDER
-from .models import Attendance, Levels, RFIDs, Strands, UserTypes, Users, Sections
+from .models import Attendance, Events, Levels, RFIDs, Strands, UserTypes, Users, Sections
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -573,10 +573,56 @@ def upload_image():
 
     return jsonify({'error': 'Invalid file type'}), 400
 
-def create_event():
-    event_name = request.json.get("event_name")
+def get_all_events():
+    events = Events.query.all()
+    return jsonify([event.toDict() for event in events]), 200
 
-    if not event_name:
-        return jsonify({"error": "Event name is required"}), 400
+# Fetch event by ID
+def get_event_by_id(event_id):
+    event = Events.query.get(event_id)
+    if event:
+        return jsonify(event.toDict()), 200
+    return jsonify({"error": "Event not found"}), 404
+
+# Create a new event
+def create_event():
+    data = request.get_json()
+    if not data or not data.get("event_name") or not data.get("event_date") or not data.get("event_month"):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    new_event = Events(
+        event_name=data["event_name"],
+        event_date=data["event_date"],  # Store full dates
+        event_month=data["event_month"]  # Store event month
+    )
     
-    
+    db.session.add(new_event)
+    db.session.commit()
+
+    return jsonify({"message": "Event created successfully", "event": new_event.toDict()}), 201
+
+
+# Update an existing event
+def update_event(event_id):
+    event = Events.query.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    data = request.get_json()
+    event.event_name = data.get("event_name", event.event_name)
+    event.event_date = data.get("event_date", event.event_date)
+
+    db.session.commit()
+    return jsonify({"message": "Event updated successfully", "event": event.toDict()}), 200
+
+# Delete an event
+def delete_event(event_id):
+    event = Events.query.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    db.session.delete(event)
+    db.session.commit()
+    return jsonify({"message": "Event deleted successfully"}), 200
+
+
